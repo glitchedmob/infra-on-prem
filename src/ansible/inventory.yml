@@ -10,14 +10,14 @@ all:
           ansible_host: 10.0.0.3
           ansible_user: root
           proxmox_api_password: "{{ lookup('env', 'X86_NODE_01_SSH_PASS') }}"
-          ssm_tailscale_authkey_path: "/homelab/proxmox-node-management/x86-node-01-auth-key"
+          ssm_tailscale_authkey_path: "/homelab/headscale/proxmox/x86-node-01-auth-key"
           os_disk: /dev/disk/by-id/nvme-WD_BLACK_SN770M_2TB_255212800414
           vmdata_disk: /dev/disk/by-id/nvme-Samsung_SSD_990_PRO_4TB_S7KGNJ0WB00297R
         x86-node-02:
           ansible_host: 10.0.0.4
           ansible_user: root
           proxmox_api_password: "{{ lookup('env', 'X86_NODE_02_SSH_PASS') }}"
-          ssm_tailscale_authkey_path: "/homelab/proxmox-node-management/x86-node-02-auth-key"
+          ssm_tailscale_authkey_path: "/homelab/headscale/proxmox/x86-node-02-auth-key"
           os_disk: /dev/disk/by-id/ata-Samsung_SSD_850_EVO_250GB_S21NNSAFC65434J
           vmdata_disk: /dev/disk/by-id/nvme-Samsung_SSD_9100_PRO_with_Heatsink_4TB_S7ZRNJ0Y504262D
 
