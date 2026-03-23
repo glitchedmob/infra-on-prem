@@ -1,29 +1,6 @@
 # This file is maintained automatically by "tofu init".
 # Manual edits may be lost in future updates.
 
-provider "registry.opentofu.org/awlsring/headscale" {
-  version     = "0.5.1"
-  constraints = "~> 0.5"
-  hashes = [
-    "h1:gVNuo+Ek30d9qrnaOWa+yEPqzQLhydAHSKPDFWMED24=",
-    "zh:0baea3a65633e997184ab434164bbd24f448a0391e22ca9bdb7b777f688f040d",
-    "zh:1566d76b0d799a9b4a7268023a798402603302866fd467b482887bebdfdd4ced",
-    "zh:1dd09404a934ee3e608a7dd51e86a7d0f4e690a158413a56b47b24e7945f40ae",
-    "zh:232706697e875c4b6e9e191799631f9c6e1c36516474acdf4698ade9d49826d1",
-    "zh:4525a840c6d96145f107f700e8a19f787e35ce06669a7799ea6103e7ff01176c",
-    "zh:48ef0cdbc342ae2fbdf538a0e6b4609adda533aa11e1269e763cda1b2445fa65",
-    "zh:6eb6317c3bd82826f7e61ce266be754d8e529d9881a43a398d50aecd4ef18af7",
-    "zh:857c1e9b0a3ccaee74e7a0466ce2f6222618438bbe85f603d0f8312c7eaecc97",
-    "zh:867b6bdcd7a9f17f38b2da24eea5129bf8d33130ad820533338847bca7059a95",
-    "zh:8bc8f61e496e96c81c46e1aa59bf2155b6acc80db1ea462f2ddd665748fcda7f",
-    "zh:adc3cac5b673d5619a41bd232e84c80bdd31a3fab142be50f4d7f79935eee221",
-    "zh:ebb3de3555172f2197b13e871c7c02ac799b4a74c1199a8e32ff2beab837ac7f",
-    "zh:f504fc7efb5fb0e265d2e48378d74dfc08114a5be468a38ca7333292965cd3e3",
-    "zh:f716d9219c118fe5e023032a915131082d29c1047d03333410916b845a639e07",
-    "zh:fdb650e1e3a6c3c62af313048d78911fff3cc6a9b8785c5e954873458003f49c",
-  ]
-}
-
 provider "registry.opentofu.org/bpg/proxmox" {
   version     = "0.99.0"
   constraints = "~> 0.97"

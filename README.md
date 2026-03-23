@@ -4,7 +4,7 @@ OpenTofu and Ansible infrastructure for on-prem networking and platform access.
 
 ## Scope
 
-- **OpenTofu (`src/tf/`)**: manages RouterOS router/switch config (bridges, interfaces, VLANs, DHCP, DNS, firewall/NAT), plus Proxmox access resources and Headscale auth-key publishing to AWS SSM.
+- **OpenTofu (`src/tf/`)**: manages RouterOS router/switch config (bridges, interfaces, VLANs, DHCP, DNS, firewall/NAT) and Proxmox access resources.
 - **State sync (`src/scripts/on-prem-state.sh`)**: fetches and backs up local Terraform state to S3.
 - **Ansible (`src/ansible/`)**: on-prem automation tooling and lint/install workflow.
 

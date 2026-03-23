@@ -38,42 +38,6 @@ variable "aws_region" {
   default     = "us-east-2"
 }
 
-variable "headscale_host" {
-  description = "Headscale hostname"
-  type        = string
-  default     = "headscale.levizitting.com"
-}
-
-variable "headscale_api_key" {
-  description = "Headscale API key"
-  type        = string
-  sensitive   = true
-}
-
-variable "headscale_key_rotation_version" {
-  description = "Rotation version for Headscale pre-auth keys"
-  type        = number
-  default     = 4
-}
-
-variable "headscale_proxmox_nodes" {
-  description = "Proxmox node names that receive Headscale pre-auth keys"
-  type        = list(string)
-  default     = ["x86-node-01", "x86-node-02"]
-}
-
-variable "headscale_proxmox_tag" {
-  description = "Headscale ACL tag for Proxmox nodes"
-  type        = string
-  default     = "tag:proxmox-x86"
-}
-
-variable "ssm_path_prefix" {
-  description = "SSM parameter path prefix for Headscale auth keys"
-  type        = string
-  default     = "/homelab/proxmox-node-management"
-}
-
 variable "proxmox_endpoint" {
   description = "Proxmox API endpoint (omit /api2/json)"
   type        = string
