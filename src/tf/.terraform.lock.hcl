@@ -1,6 +1,74 @@
 # This file is maintained automatically by "tofu init".
 # Manual edits may be lost in future updates.
 
+provider "registry.opentofu.org/awlsring/headscale" {
+  version     = "0.5.1"
+  constraints = "~> 0.5"
+  hashes = [
+    "h1:gVNuo+Ek30d9qrnaOWa+yEPqzQLhydAHSKPDFWMED24=",
+    "zh:0baea3a65633e997184ab434164bbd24f448a0391e22ca9bdb7b777f688f040d",
+    "zh:1566d76b0d799a9b4a7268023a798402603302866fd467b482887bebdfdd4ced",
+    "zh:1dd09404a934ee3e608a7dd51e86a7d0f4e690a158413a56b47b24e7945f40ae",
+    "zh:232706697e875c4b6e9e191799631f9c6e1c36516474acdf4698ade9d49826d1",
+    "zh:4525a840c6d96145f107f700e8a19f787e35ce06669a7799ea6103e7ff01176c",
+    "zh:48ef0cdbc342ae2fbdf538a0e6b4609adda533aa11e1269e763cda1b2445fa65",
+    "zh:6eb6317c3bd82826f7e61ce266be754d8e529d9881a43a398d50aecd4ef18af7",
+    "zh:857c1e9b0a3ccaee74e7a0466ce2f6222618438bbe85f603d0f8312c7eaecc97",
+    "zh:867b6bdcd7a9f17f38b2da24eea5129bf8d33130ad820533338847bca7059a95",
+    "zh:8bc8f61e496e96c81c46e1aa59bf2155b6acc80db1ea462f2ddd665748fcda7f",
+    "zh:adc3cac5b673d5619a41bd232e84c80bdd31a3fab142be50f4d7f79935eee221",
+    "zh:ebb3de3555172f2197b13e871c7c02ac799b4a74c1199a8e32ff2beab837ac7f",
+    "zh:f504fc7efb5fb0e265d2e48378d74dfc08114a5be468a38ca7333292965cd3e3",
+    "zh:f716d9219c118fe5e023032a915131082d29c1047d03333410916b845a639e07",
+    "zh:fdb650e1e3a6c3c62af313048d78911fff3cc6a9b8785c5e954873458003f49c",
+  ]
+}
+
+provider "registry.opentofu.org/bpg/proxmox" {
+  version     = "0.99.0"
+  constraints = "~> 0.97"
+  hashes = [
+    "h1:6V45BVhSDz6rZPFuUT584auK5uTdnbP9E+vXqZTbGYo=",
+    "zh:2ac2a659c1d9ceb180337ccc2ad86427383420230b2cd298f821cba9cbf5645c",
+    "zh:2f8145d697bd4efbc1ffd3346d686866e104b21303dec3ff2ce0f9f501ddc9be",
+    "zh:2fd459efb1b6658891e290111ca85d906eef42fe27c21af96b95442da8d461de",
+    "zh:3365c9be6501a9018b6b0dd599b48bdef4277f6509b299dde5f25d559d774068",
+    "zh:4088709a948886a22d92f98ba0782481001e9b94a3027cb3a3b39a7ba40be8d2",
+    "zh:537e9c663bc03bc416e615d94c54ebc6a0cb8453029f12344eeefa14fe2a20db",
+    "zh:5871bc9d5d3c3ec7f32b67a63e8127e29e7e92f6c1a9b8d1f98f2f6e9be263ab",
+    "zh:680239bd34a8a1c874a87a48d1062a69338bbd59fddf3c41e605e0fc2a714842",
+    "zh:6fd3445e460361d5ef5d6bf34c731ca7dc84ea7c2e39a2de50546f0f175f089a",
+    "zh:e3d0b208f7b982dc265c7daa77b3cb9ace9789b4ed4ad55107f03a6624be6beb",
+    "zh:e406403644ab5ad85478bfe25db9eeabd28a8c926bf580ba1a0ff37fdf61a05d",
+    "zh:f020a472d78da34c3ebabed07e9019da778e107e215e2e66f4f2e99b033af304",
+    "zh:f26e0763dbe6a6b2195c94b44696f2110f7f55433dc142839be16b9697fa5597",
+    "zh:f7afb6b0486c09b2b8e36576e9d64ca36f31940fac574740ecf8ccdee9febb6c",
+  ]
+}
+
+provider "registry.opentofu.org/hashicorp/aws" {
+  version     = "6.37.0"
+  constraints = "~> 6.33"
+  hashes = [
+    "h1:+jjLAPRTuXA4E1AvAXI5yRxwaVFWa93ybbcY1xyu1Xg=",
+    "zh:13b447dd4baba57074e4edc51a9391bf093dc1f1c1e2181ac30de15181cf156a",
+    "zh:33007d52b5ddf3e82c850557a9fbdf1613fbcbc0f81a0e674b2e6010b43d18cf",
+    "zh:331012523e5264eda5ec6e492c7774f79377efd140df52c8eac87557d9b1acdc",
+    "zh:4a0a6e5a9d6b4f3ef5a78d6ebbec1f295931d09a06c5cc38760adc3c29976b99",
+    "zh:56ca7a381979c8863abd2c87ef7df0959b16774448d3c541e5ec0d36f0b30c76",
+    "zh:5a355ec56c6392abebfb02f135f00108bef73a166482a4538da0f13c9389db7f",
+    "zh:61bf35bf78ed214c6f844a7278a64129106db20e9364dc298f4a1da4f8e51459",
+    "zh:747f82ae6f3e5adbcab2099cfcd2c280d79f44540cf6911fa7e716473a573da9",
+    "zh:844a75f08ab884729663cae4f7a8cf9170942688e7b95f01ccfbbf22feeaf032",
+    "zh:9298ddd4cd022e644333625fc17324a144371a180d28f7045f85a0062737ef43",
+    "zh:c377261179fdec66267f58a00a85c2d243590144881221263492c69a7187f18f",
+    "zh:d62acb7e6782312f5528f3f8074a847aa4a49b647364351d547e1f9ab2a25a23",
+    "zh:daf53961b93fd64b0c22422133f5bfcb4a44fafe887a08f9ce784e48abf88e48",
+    "zh:de408c9e4d9fbf2dae00d4f6642a8a468f05effb13ce9fbacd05eb64e7872b3f",
+    "zh:efc02c5081c5b70f682452d3c43d52d6f202884a095629d87c16402aea8823f5",
+  ]
+}
+
 provider "registry.opentofu.org/terraform-routeros/routeros" {
   version     = "1.99.1"
   constraints = "~> 1.99"
