@@ -9,7 +9,7 @@ This repository is migrated in two phases:
 1. Phase 2A: RouterOS-only Terraform migration from `infra-old/src/on-prem-networking`.
 2. Phase 2B: Layer Proxmox + Headscale + AWS resources and merge Ansible projects.
 
-The Terraform S3 state key stays on `on-prem-networking/terraform.tfstate` for now.
+The Terraform S3 state key is `infra-on-prem/terraform.tfstate`.
 
 ## Structure
 
