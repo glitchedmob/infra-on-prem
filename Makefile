@@ -1,5 +1,5 @@
 .PHONY: help tf-init tf-plan tf-plan-sync tf-show tf-output tf-apply tf-apply-sync tf-validate tf-format tf-lint-fix \
-        tf-provider-lock tf-providers-lock tf-state-fetch tf-state-backup ansible-install ansible-lint
+        tf-provider-lock tf-providers-lock tf-state-fetch tf-state-backup ansible ansible-shell ansible-install ansible-inventory ansible-lint ansible-lint-fix
 
 TF_DIR := src/tf
 ANSIBLE_DIR := src/ansible
@@ -27,7 +27,11 @@ help:
 	@echo ""
 	@echo "Ansible commands:"
 	@echo "  Install deps:      make ansible-install"
+	@echo "  Run playbook:      make ansible PLAYBOOK=playbook.yml [ARGS='-v']"
+	@echo "  Inventory:         make ansible-inventory [ARGS='--list']"
+	@echo "  Shell command:     make ansible-shell HOST=host COMMAND='cmd' [ARGS='-v']"
 	@echo "  Lint:              make ansible-lint"
+	@echo "  Lint fix:          make ansible-lint-fix"
 
 tf-init:
 	@source "$(ENVRC)" && tofu -chdir=$(TF_DIR) init $(ARGS)
@@ -71,6 +75,18 @@ tf-state-fetch:
 tf-state-backup:
 	@source "$(ENVRC)" && bash $(STATE_SCRIPT) backup
 
+ansible:
+	@[ -n "$(PLAYBOOK)" ] || (echo "Error: PLAYBOOK required" && exit 1)
+	@source "$(ENVRC)" && cd $(ANSIBLE_DIR) && uv run ansible-playbook playbooks/$(PLAYBOOK) $(ARGS)
+
+ansible-shell:
+	@[ -n "$(HOST)" ] || (echo "Error: HOST required (e.g., x86-node-01)" && exit 1)
+	@[ -n "$(COMMAND)" ] || (echo "Error: COMMAND required (e.g., 'uname -a')" && exit 1)
+	@source "$(ENVRC)" && cd $(ANSIBLE_DIR) && uv run ansible $(HOST) -m shell -a "$(COMMAND)" $(ARGS)
+
+ansible-inventory:
+	@source "$(ENVRC)" && cd $(ANSIBLE_DIR) && uv run ansible-inventory $(ARGS)
+
 ansible-install:
 	@if [ ! -f "$(ANSIBLE_DIR)/pyproject.toml" ]; then \
 		echo "No $(ANSIBLE_DIR)/pyproject.toml found; skipping ansible-install."; \
@@ -83,4 +99,11 @@ ansible-lint:
 		echo "No $(ANSIBLE_DIR)/pyproject.toml found; skipping ansible-lint."; \
 	else \
 		cd $(ANSIBLE_DIR) && uv run ansible-lint; \
+	fi
+
+ansible-lint-fix:
+	@if [ ! -f "$(ANSIBLE_DIR)/pyproject.toml" ]; then \
+		echo "No $(ANSIBLE_DIR)/pyproject.toml found; skipping ansible-lint-fix."; \
+	else \
+		cd $(ANSIBLE_DIR) && uv run ansible-lint --fix; \
 	fi
