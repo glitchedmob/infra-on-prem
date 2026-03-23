@@ -18,11 +18,19 @@ locals {
     "VM.PowerMgmt",
   ]
 
+  network_use_privileges = [
+    "SDN.Use",
+  ]
+
   pools = {
     sgfdevs = {
       comment         = "managedBy=terraform,team=sgfdevs"
       role_id         = "SgfdevsVmAdmin"
+      network_role_id = "SgfdevsNetworkUse"
       role_privileges = local.pool_privileges
+      allowed_sdn_networks = [
+        "sgfdevs",
+      ]
       users = [
         {
           user_id        = "sgfdevs-gha@pve"
@@ -37,15 +45,33 @@ locals {
 
   proxmox_pools = { for pool_id, pool in local.pools : pool_id => { comment = pool.comment } }
 
-  proxmox_roles = {
+  sdn_acl_paths = {
+    for network_key, network in local.sdn_networks : network_key => "/sdn/zones/${network.zone_id}/${network.vnet_id}"
+  }
+
+  proxmox_pool_roles = {
     for pool_id, pool in local.pools : pool.role_id => {
       privileges = pool.role_privileges
     }
   }
 
+  proxmox_network_roles = {
+    for pool_id, pool in local.pools : pool.network_role_id => {
+      privileges = local.network_use_privileges
+    }
+    if try(length(pool.allowed_sdn_networks), 0) > 0
+  }
+
+  proxmox_roles = merge(local.proxmox_pool_roles, local.proxmox_network_roles)
+
   pool_users = flatten([
     for pool_id, pool in local.pools : [
-      for user in pool.users : merge(user, { pool_id = pool_id, role_id = pool.role_id })
+      for user in pool.users : merge(user, {
+        pool_id              = pool_id
+        role_id              = pool.role_id
+        network_role_id      = pool.network_role_id
+        allowed_sdn_networks = try(pool.allowed_sdn_networks, [])
+      })
     ]
   ])
 
@@ -66,13 +92,23 @@ locals {
   }
 
   proxmox_user_acls = {
-    for user in local.pool_users : user.user_id => [
-      {
-        path      = "/pool/${user.pool_id}"
-        role_id   = user.role_id
-        propagate = true
-      }
-    ]
+    for user in local.pool_users : user.user_id => concat(
+      [
+        {
+          path      = "/pool/${user.pool_id}"
+          role_id   = user.role_id
+          propagate = true
+        }
+      ],
+      [
+        for network_key in user.allowed_sdn_networks : {
+          path      = local.sdn_acl_paths[network_key]
+          role_id   = user.network_role_id
+          propagate = true
+        }
+        if contains(keys(local.sdn_acl_paths), network_key)
+      ]
+    )
   }
 
   proxmox_tokens_with_ssm = {
