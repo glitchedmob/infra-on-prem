@@ -1,4 +1,13 @@
 locals {
+  proxmox_nodes = [
+    "x86-node-01",
+    "x86-node-02",
+  ]
+
+  proxmox_image_datastore_ids = {
+    for node_name in local.proxmox_nodes : node_name => "local"
+  }
+
   pool_privileges = [
     "Datastore.Allocate",
     "Datastore.AllocateSpace",
