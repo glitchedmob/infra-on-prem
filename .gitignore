@@ -1,0 +1,17 @@
+# Environment files
+.envrc
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.tfstate
+.tfplan
+*.log
+src/tf/.terraform/
+
+# Ansible
+src/ansible/collections/
+src/ansible/.ansible/
+src/ansible/*.log
+src/ansible/__pycache__/
+src/ansible/.venv/

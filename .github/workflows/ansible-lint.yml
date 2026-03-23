@@ -1,0 +1,24 @@
+name: Ansible Lint
+
+on:
+  pull_request:
+    paths:
+      - src/ansible/**
+      - .github/workflows/ansible-lint.yml
+  push:
+    branches:
+      - main
+    paths:
+      - src/ansible/**
+      - .github/workflows/ansible-lint.yml
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  lint:
+    if: ${{ hashFiles('src/ansible/pyproject.toml') != '' }}
+    uses: glitchedmob/infra-gha/.github/workflows/ansible-lint.yml@v0.6.4
+    with:
+      working-directory: src/ansible

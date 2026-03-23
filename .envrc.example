@@ -1,0 +1,10 @@
+export AWS_DEFAULT_PROFILE="your-aws-profile-name"
+export INFRA_TF_STATE_BUCKET="your-infra-tf-state-bucket"
+
+export TF_VAR_router_host="https://router.example.local"
+export TF_VAR_router_username="admin"
+export TF_VAR_router_password="your-router-api-password"
+
+export TF_VAR_switch_host="https://switch.example.local"
+export TF_VAR_switch_username="admin"
+export TF_VAR_switch_password="your-switch-api-password"
