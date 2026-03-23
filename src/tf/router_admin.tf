@@ -10,6 +10,11 @@ locals {
       mac_address = "42:6d:65:36:5d:e3"
       comment     = "managedBy=terraform,network=home,role=admin"
     }
+    levi_m5_macbook = {
+      address     = "192.168.1.12"
+      mac_address = "fc:b2:14:e0:65:f2"
+      comment     = "managedBy=terraform,network=home,role=admin"
+    }
   }
 }
 
