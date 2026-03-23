@@ -1,0 +1,14 @@
+auto lo
+iface lo inet loopback
+
+iface {{ iface_name }} inet manual
+
+auto {{ bridge_name }}
+iface {{ bridge_name }} inet static
+    address {{ management_address }}
+    gateway {{ management_gateway }}
+    bridge-ports {{ iface_name }}
+    bridge-stp off
+    bridge-fd 0
+
+source /etc/network/interfaces.d/*

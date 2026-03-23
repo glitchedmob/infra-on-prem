@@ -1,0 +1,177 @@
+---
+- name: Create and join Proxmox cluster
+  hosts: proxmox_nodes
+  become: true
+  vars:
+    cluster_group_candidates:
+      - proxmox_x86_cluster
+      - proxmox_arm_cluster
+  module_defaults:
+    group/community.proxmox.proxmox:
+      api_user: root@pam
+      api_password: "{{ proxmox_api_password }}"
+      validate_certs: "{{ proxmox_validate_certs | default(false) }}"
+  tasks:
+    - name: Resolve cluster group for host
+      ansible.builtin.set_fact:
+        cluster_group: >-
+          {{ (group_names | intersect(cluster_group_candidates) | list | first) | default("", true) }}
+
+    - name: Assert host belongs to a supported cluster group
+      ansible.builtin.assert:
+        that:
+          - cluster_group | length > 0
+        fail_msg: "Host is not in a supported cluster group."
+
+    - name: Assert play runs against a single cluster group (e.g. no nodes from other cluster groups)
+      vars:
+        cluster_groups_in_play: >-
+          {{ ansible_play_hosts | map('extract', hostvars, 'cluster_group') | list | unique }}
+      ansible.builtin.assert:
+        that:
+          - cluster_groups_in_play | length == 1
+        fail_msg: "Run this playbook once per cluster (limit to a single cluster group)."
+      run_once: true
+
+    - name: Assert cluster variables are set
+      ansible.builtin.assert:
+        that:
+          - cluster_name is defined
+          - cluster_name | length > 0
+          - primary_node is defined
+          - primary_node in groups[cluster_group]
+
+    - name: Assert ansible_host is set for cluster nodes
+      ansible.builtin.assert:
+        that:
+          - hostvars[item].ansible_host is defined
+          - hostvars[item].ansible_host | length > 0
+      loop: "{{ groups[cluster_group] }}"
+      run_once: true
+
+    - name: Assert hostnames match inventory names
+      ansible.builtin.assert:
+        that:
+          - ansible_hostname == inventory_hostname
+        fail_msg: "Hostnames must match inventory names for Proxmox clustering."
+
+    - name: Ensure /etc/hosts includes cluster nodes
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: "^{{ hostvars[item].ansible_host }}\\s+{{ item }}$"
+        line: "{{ hostvars[item].ansible_host }} {{ item }}"
+        state: present
+      loop: "{{ groups[cluster_group] }}"
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert time sync service is running
+      ansible.builtin.assert:
+        that:
+          - time_sync_running
+        fail_msg: "No time sync service running (chrony/chronyd/systemd-timesyncd)."
+      vars:
+        time_sync_running: >-
+          {{
+            ("chrony.service" in ansible_facts.services
+            and ansible_facts.services["chrony.service"].state == "running")
+            or ("chronyd.service" in ansible_facts.services
+            and ansible_facts.services["chronyd.service"].state == "running")
+            or ("systemd-timesyncd.service" in ansible_facts.services
+            and ansible_facts.services["systemd-timesyncd.service"].state == "running")
+          }}
+
+    - name: Assert cluster nodes have API passwords
+      ansible.builtin.assert:
+        that:
+          - hostvars[item].proxmox_api_password is defined
+          - hostvars[item].proxmox_api_password | length > 0
+        fail_msg: "Set proxmox_api_password for all cluster nodes in inventory."
+      loop: "{{ groups[cluster_group] }}"
+      run_once: true
+
+    - name: Set primary API password fallback
+      ansible.builtin.set_fact:
+        primary_api_password: >-
+          {{
+            proxmox_master_api_password
+            | default(hostvars[primary_node].proxmox_api_password, true)
+          }}
+
+    - name: Set primary corosync link0 address
+      ansible.builtin.set_fact:
+        primary_link0_address: >-
+          {{
+            hostvars[primary_node].corosync_link0
+            | default(hostvars[primary_node].ansible_host, true)
+          }}
+      run_once: true
+
+    - name: Set node corosync link0 address
+      ansible.builtin.set_fact:
+        node_link0_address: "{{ corosync_link0 | default(ansible_host, true) }}"
+
+    - name: Create cluster on primary
+      community.proxmox.proxmox_cluster:
+        state: present
+        api_host: "{{ hostvars[primary_node].ansible_host }}"
+        cluster_name: "{{ cluster_name }}"
+        link0: "{{ primary_link0_address }}"
+      delegate_to: localhost
+      become: false
+      run_once: true
+
+    - name: Fetch cluster join info from primary
+      community.proxmox.proxmox_cluster_join_info:
+        api_host: "{{ hostvars[primary_node].ansible_host }}"
+        api_password: "{{ primary_api_password }}"
+      register: cluster_join_info
+      delegate_to: localhost
+      become: false
+      run_once: true
+
+    - name: Set cluster fingerprint fact
+      ansible.builtin.set_fact:
+        cluster_fingerprint: >-
+          {{
+            (cluster_join_info.cluster_join.nodelist
+            | selectattr('name', 'equalto', primary_node)
+            | map(attribute='pve_fp')
+            | list
+            | first)
+            | default('', true)
+          }}
+      run_once: true
+
+    - name: Assert cluster fingerprint is available
+      ansible.builtin.assert:
+        that:
+          - cluster_fingerprint | length > 0
+        fail_msg: "Cluster fingerprint not found in join info for primary node."
+      run_once: true
+
+    - name: Mark nodes already in cluster
+      ansible.builtin.set_fact:
+        node_in_cluster: >-
+          {{
+            inventory_hostname in
+            (cluster_join_info.cluster_join.nodelist
+            | map(attribute='name')
+            | list)
+          }}
+
+    - name: Join node to cluster
+      community.proxmox.proxmox_cluster:
+        state: present
+        api_host: "{{ ansible_host }}"
+        master_api_password: "{{ primary_api_password }}"
+        master_ip: "{{ hostvars[primary_node].ansible_host }}"
+        fingerprint: "{{ cluster_fingerprint }}"
+        cluster_name: "{{ cluster_name }}"
+        link0: "{{ node_link0_address }}"
+      when:
+        - inventory_hostname != primary_node
+        - not node_in_cluster
+      delegate_to: localhost
+      become: false

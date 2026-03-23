@@ -1,0 +1,5 @@
+---
+collections:
+  - name: community.proxmox
+  - name: artis3n.tailscale
+  - name: amazon.aws

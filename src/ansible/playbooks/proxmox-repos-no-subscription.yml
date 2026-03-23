@@ -1,0 +1,61 @@
+---
+- name: Switch Proxmox to no-subscription repositories
+  hosts: proxmox_nodes
+  become: true
+  gather_facts: true
+  vars:
+    pve_repo_file: /etc/apt/sources.list.d/pve-no-subscription.list
+    pve_enterprise_list: /etc/apt/sources.list.d/pve-enterprise.list
+    pve_enterprise_sources: /etc/apt/sources.list.d/pve-enterprise.sources
+    pve_ceph_sources: /etc/apt/sources.list.d/ceph.sources
+  tasks:
+    - name: Check for enterprise repo list file
+      ansible.builtin.stat:
+        path: "{{ pve_enterprise_list }}"
+      register: pve_enterprise_list_stat
+
+    - name: Check for enterprise repo sources file
+      ansible.builtin.stat:
+        path: "{{ pve_enterprise_sources }}"
+      register: pve_enterprise_sources_stat
+
+    - name: Check for enterprise ceph sources file
+      ansible.builtin.stat:
+        path: "{{ pve_ceph_sources }}"
+      register: pve_ceph_sources_stat
+
+    - name: Comment out enterprise repo entries (legacy list)
+      ansible.builtin.replace:
+        path: "{{ pve_enterprise_list }}"
+        regexp: '^(deb\s+.*)$'
+        replace: '# \1'
+      when: pve_enterprise_list_stat.stat.exists
+
+    - name: Disable enterprise repo (deb822 sources)
+      ansible.builtin.lineinfile:
+        path: "{{ pve_enterprise_sources }}"
+        line: "Enabled: no"
+        insertafter: "^Signed-By:"
+        state: present
+      when: pve_enterprise_sources_stat.stat.exists
+
+    - name: Disable enterprise ceph repo (deb822 sources)
+      ansible.builtin.lineinfile:
+        path: "{{ pve_ceph_sources }}"
+        line: "Enabled: no"
+        insertafter: "^Signed-By:"
+        state: present
+      when: pve_ceph_sources_stat.stat.exists
+
+    - name: Add no-subscription repo
+      ansible.builtin.copy:
+        dest: "{{ pve_repo_file }}"
+        content: "deb http://download.proxmox.com/debian/pve {{ ansible_distribution_release }} pve-no-subscription\n"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600

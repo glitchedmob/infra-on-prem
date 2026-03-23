@@ -1,0 +1,44 @@
+---
+- name: Bootstrap Proxmox Nodes for Management Network
+  hosts: bootstrap
+  gather_facts: false
+  become: true
+  vars:
+    bridge_name: "vmbr0"
+  tasks:
+    - name: Parse physical interface from current config
+      ansible.builtin.shell: |
+        set -o pipefail
+        grep "bridge-ports" /etc/network/interfaces | awk '{print $2}'
+      args:
+        executable: /bin/bash
+      changed_when: false
+      register: physical_interface
+
+    - name: Backup existing network config
+      ansible.builtin.copy:
+        src: /etc/network/interfaces
+        dest: /etc/network/interfaces.backup
+        mode: "0600"
+        remote_src: true
+
+    - name: Set management address from ansible_host
+      ansible.builtin.set_fact:
+        management_address: "{{ ansible_host }}/24"
+
+    - name: Write management network config
+      ansible.builtin.template:
+        src: network-interfaces-vlan-aware.j2
+        dest: /etc/network/interfaces
+        mode: "0644"
+      vars:
+        iface_name: "{{ physical_interface.stdout }}"
+        management_address: "{{ management_address }}"
+
+    - name: Reboot to apply all changes
+      ansible.builtin.reboot:
+        msg: "Rebooting to apply management network configuration"
+        connect_timeout: 5
+        reboot_timeout: 300
+        pre_reboot_delay: 2
+        post_reboot_delay: 30

@@ -1,0 +1,52 @@
+---
+- name: Configure Tailscale with Headscale
+  hosts: proxmox_nodes
+  become: true
+  tasks:
+    - name: Assert Headscale login server is set
+      ansible.builtin.assert:
+        that:
+          - tailscale_login_server is defined
+          - tailscale_login_server | length > 0
+        fail_msg: "Set tailscale_login_server for proxmox_nodes."
+
+    - name: Assert subnet routes are set
+      ansible.builtin.assert:
+        that:
+          - tailscale_advertise_routes is defined
+          - tailscale_advertise_routes | length > 0
+        fail_msg: "Set tailscale_advertise_routes for proxmox_nodes."
+
+    - name: Assert SSM auth key path is set
+      ansible.builtin.assert:
+        that:
+          - ssm_tailscale_authkey_path is defined
+          - ssm_tailscale_authkey_path | length > 0
+        fail_msg: "Set ssm_tailscale_authkey_path for each host."
+
+    - name: Fetch Tailscale auth key from SSM
+      ansible.builtin.set_fact:
+        tailscale_authkey_value: "{{ lookup('amazon.aws.aws_ssm', ssm_tailscale_authkey_path) }}"
+
+    - name: Enable IPv4 forwarding for subnet routing
+      ansible.posix.sysctl:
+        name: net.ipv4.ip_forward
+        value: "1"
+        state: present
+        reload: true
+
+    - name: Enable IPv6 forwarding for subnet routing
+      ansible.posix.sysctl:
+        name: net.ipv6.conf.all.forwarding
+        value: "1"
+        state: present
+        reload: true
+
+    - name: Install and configure Tailscale
+      ansible.builtin.include_role:
+        name: artis3n.tailscale.machine
+      vars:
+        tailscale_authkey: "{{ tailscale_authkey_value }}"
+        tailscale_args: >-
+          --login-server={{ tailscale_login_server }}
+          --advertise-routes={{ tailscale_advertise_routes }}

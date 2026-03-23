@@ -1,0 +1,23 @@
+---
+- name: Verify Proxmox Node Connectivity
+  hosts: bootstrap
+  gather_facts: false
+  tasks:
+    - name: Verify Ansible control connection
+      ansible.builtin.ping:
+
+    - name: Check management gateway reachability
+      ansible.builtin.command: ping -c 3 {{ management_gateway }}
+      changed_when: false
+
+    - name: Check internet reachability by IP
+      ansible.builtin.command: ping -c 3 1.1.1.1
+      changed_when: false
+
+    - name: Check internet reachability by DNS
+      ansible.builtin.command: ping -c 3 cloudflare.com
+      changed_when: false
+
+    - name: Show default route
+      ansible.builtin.command: ip route show default
+      changed_when: false

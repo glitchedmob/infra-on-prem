@@ -1,0 +1,19 @@
+auto lo
+iface lo inet loopback
+
+iface {{ iface_name }} inet manual
+
+auto {{ bridge_name }}
+iface {{ bridge_name }} inet manual
+	bridge-ports {{ iface_name }}
+	bridge-stp off
+	bridge-fd 0
+	bridge-vlan-aware yes
+	bridge-vids 2-4094
+
+auto {{ bridge_name }}.{{ management_vlan }}
+iface {{ bridge_name }}.{{ management_vlan }} inet static
+	address {{ management_address }}
+	gateway {{ management_gateway }}
+
+source /etc/network/interfaces.d/*

@@ -1,0 +1,63 @@
+---
+- name: Install SSH keys and disable password auth
+  hosts: bootstrap
+  gather_facts: false
+  become: true
+  vars:
+    op_item_name: "Proxmox Nodes"
+  tasks:
+    - name: Ensure .ssh directory exists
+      ansible.builtin.file:
+        path: /root/.ssh
+        state: directory
+        mode: "0700"
+
+    - name: Get list of 1Password accounts
+      ansible.builtin.command: op account list --format json
+      delegate_to: localhost
+      become: false
+      changed_when: false
+      register: op_accounts
+
+    - name: Get account ID by email
+      ansible.builtin.shell: |
+        set -o pipefail
+        echo '{{ op_accounts.stdout }}' | jq -r '.[] | select(.email == "me@levizitting.com") | .user_uuid'
+      args:
+        executable: /bin/bash
+      delegate_to: localhost
+      become: false
+      changed_when: false
+      register: account_id
+
+    - name: Read public key from 1Password
+      ansible.builtin.command: |
+        op item get "{{ op_item_name }}" --field "public key" --account {{ account_id.stdout }}
+      delegate_to: localhost
+      become: false
+      changed_when: false
+      register: public_key_result
+
+    - name: Install authorized_keys
+      ansible.builtin.lineinfile:
+        path: /root/.ssh/authorized_keys
+        line: "{{ public_key_result.stdout }}"
+        create: true
+        mode: "0600"
+
+    - name: Disable password authentication
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?\\s*PasswordAuthentication"
+        line: "PasswordAuthentication no"
+
+    - name: Disable root password login
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?\\s*PermitRootLogin"
+        line: "PermitRootLogin prohibit-password"
+
+    - name: Restart SSH service
+      ansible.builtin.systemd:
+        name: ssh
+        state: restarted

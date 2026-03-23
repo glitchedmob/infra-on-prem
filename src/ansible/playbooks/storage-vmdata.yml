@@ -1,0 +1,207 @@
+---
+- name: Configure vmdata LVM-thin storage on 4TB SSDs
+  hosts: proxmox_nodes
+  become: true
+  vars:
+    vmdata_vg: vg_vmdata
+    vmdata_pool: vmdata
+    vmdata_storage_id: vmdata
+    vmdata_partition_number: 1
+    os_vg: pve
+    os_root_lv: root
+    os_data_lv: data
+  tasks:
+    - name: Assert required disk variables are set
+      ansible.builtin.assert:
+        that:
+          - os_disk is defined
+          - vmdata_disk is defined
+          - os_disk | length > 0
+          - vmdata_disk | length > 0
+
+    - name: Assert vmdata disk differs from OS disk
+      ansible.builtin.assert:
+        that:
+          - os_disk != vmdata_disk
+
+    - name: Ensure parted is installed
+      ansible.builtin.apt:
+        name: parted
+        state: present
+        update_cache: true
+
+    - name: List vmdata disk partitions and mountpoints
+      ansible.builtin.command: lsblk -nr -o NAME,TYPE,MOUNTPOINT {{ vmdata_disk }}
+      register: vmdata_lsblk
+      changed_when: false
+
+    - name: Collect vmdata disk partitions
+      ansible.builtin.set_fact:
+        vmdata_partitions: >-
+          {{
+            vmdata_lsblk.stdout_lines
+            | map('split')
+            | selectattr('1', 'equalto', 'part')
+            | map('first')
+            | map('regex_replace', '^', '/dev/')
+            | list
+          }}
+
+    - name: Unmount any vmdata partitions that are mounted
+      ansible.builtin.command: umount {{ item[2] }}
+      when: item | length > 2 and (item[2] | length > 0)
+      loop: "{{ vmdata_lsblk.stdout_lines | map('split') | list }}"
+      changed_when: true
+      failed_when: false
+
+    - name: Detect any VGs on vmdata partitions
+      ansible.builtin.command: pvs --noheadings -o vg_name {{ item }}
+      register: vmdata_pv_vgs
+      changed_when: false
+      failed_when: false
+      loop: "{{ vmdata_partitions }}"
+
+    - name: Deactivate any VGs on vmdata disk
+      ansible.builtin.command: vgchange -an {{ item }}
+      loop: >-
+        {{
+          vmdata_pv_vgs.results
+          | map(attribute='stdout')
+          | map('trim')
+          | reject('equalto', '')
+          | unique
+          | list
+        }}
+      changed_when: true
+      failed_when: false
+
+    - name: Remove LVM metadata from vmdata partitions
+      ansible.builtin.command: pvremove -ff -y {{ item }}
+      loop: "{{ vmdata_partitions }}"
+      changed_when: true
+      failed_when: false
+
+    - name: Wipe existing signatures on vmdata disk
+      ansible.builtin.command: wipefs -a {{ vmdata_disk }}
+      changed_when: true
+      failed_when: false
+
+    - name: Ensure GPT partition table on vmdata disk
+      community.general.parted:
+        device: "{{ vmdata_disk }}"
+        label: gpt
+
+    - name: Define vmdata partition path
+      ansible.builtin.set_fact:
+        vmdata_partition: "{{ vmdata_disk }}-part{{ vmdata_partition_number }}"
+
+    - name: Detect root filesystem type
+      ansible.builtin.command: findmnt -n -o FSTYPE /
+      register: root_fstype
+      changed_when: false
+
+    - name: Fail if root filesystem is unsupported
+      ansible.builtin.assert:
+        that:
+          - root_fstype.stdout in ["ext4", "xfs"]
+        fail_msg: "Unsupported root filesystem '{{ root_fstype.stdout }}'. Expected ext4 or xfs."
+
+    - name: Check if local-lvm storage exists
+      ansible.builtin.command: pvesm status --storage local-lvm
+      register: local_lvm_status
+      changed_when: false
+      failed_when: false
+
+    - name: List local-lvm volumes if storage exists
+      ansible.builtin.command: pvesm list local-lvm
+      register: local_lvm_list
+      changed_when: false
+      failed_when: false
+      when: local_lvm_status.rc == 0
+
+    - name: Fail if local-lvm contains volumes
+      ansible.builtin.assert:
+        that:
+          - local_lvm_list.stdout_lines | length <= 1
+        fail_msg: "local-lvm still contains volumes. Migrate or delete VM disks before removal."
+      when: local_lvm_status.rc == 0
+
+    - name: Create vmdata partition
+      community.general.parted:
+        device: "{{ vmdata_disk }}"
+        label: gpt
+        number: "{{ vmdata_partition_number }}"
+        part_start: 1MiB
+        part_end: 100%
+        state: present
+        flags:
+          - lvm
+
+    - name: Create LVM volume group for vmdata
+      community.general.lvg:
+        vg: "{{ vmdata_vg }}"
+        pvs: "{{ vmdata_partition }}"
+        state: present
+
+    - name: Create vmdata thin pool
+      community.general.lvol:
+        vg: "{{ vmdata_vg }}"
+        thinpool: "{{ vmdata_pool }}"
+        size: 100%FREE
+
+    - name: Check if vmdata storage exists
+      ansible.builtin.command: pvesm status --storage {{ vmdata_storage_id }}
+      register: vmdata_storage_status
+      changed_when: false
+      failed_when: false
+
+    - name: Add vmdata storage
+      ansible.builtin.command: >-
+        pvesm add lvmthin {{ vmdata_storage_id }}
+        --vgname {{ vmdata_vg }}
+        --thinpool {{ vmdata_pool }}
+        --content images,rootdir
+      when: vmdata_storage_status.rc != 0
+      changed_when: true
+
+    - name: Restrict local storage content to non-VM assets
+      ansible.builtin.command: pvesm set local --content iso,vztmpl,backup,snippets
+      changed_when: false
+
+    - name: Remove local-lvm storage
+      ansible.builtin.command: pvesm remove local-lvm
+      when: local_lvm_status.rc == 0
+      changed_when: true
+
+    - name: Check if OS data thinpool exists
+      ansible.builtin.command: lvs --noheadings -o lv_name {{ os_vg }}
+      register: os_lvs
+      changed_when: false
+
+    - name: Remove OS data thinpool
+      ansible.builtin.command: lvremove -y {{ os_vg }}/{{ os_data_lv }}
+      when: os_data_lv in (os_lvs.stdout_lines | map('trim') | list)
+      changed_when: true
+
+    - name: Read available free space in OS volume group
+      ansible.builtin.command: vgs --noheadings -o vg_free --units b --nosuffix {{ os_vg }}
+      register: os_vg_free
+      changed_when: false
+
+    - name: Expand OS root logical volume to fill free space
+      community.general.lvol:
+        vg: "{{ os_vg }}"
+        lv: "{{ os_root_lv }}"
+        size: 100%FREE
+        resizefs: false
+      when: (os_vg_free.stdout | trim | float) > 0
+
+    - name: Grow ext4 filesystem on root
+      ansible.builtin.command: resize2fs /dev/{{ os_vg }}/{{ os_root_lv }}
+      when: root_fstype.stdout == "ext4" and (os_vg_free.stdout | trim | float) > 0
+      changed_when: true
+
+    - name: Grow xfs filesystem on root
+      ansible.builtin.command: xfs_growfs /
+      when: root_fstype.stdout == "xfs" and (os_vg_free.stdout | trim | float) > 0
+      changed_when: true

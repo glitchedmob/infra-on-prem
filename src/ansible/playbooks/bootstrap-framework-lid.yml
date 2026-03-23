@@ -1,0 +1,63 @@
+---
+- name: Configure Framework 16 for Headless Operation (x86-node-01)
+  hosts: x86-node-01
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Configure systemd-logind to ignore lid switch
+      ansible.builtin.lineinfile:
+        path: /etc/systemd/logind.conf
+        regexp: "^#?HandleLidSwitch="
+        line: "HandleLidSwitch=ignore"
+        create: false
+
+    - name: Configure systemd-logind to ignore lid switch (docked)
+      ansible.builtin.lineinfile:
+        path: /etc/systemd/logind.conf
+        regexp: "^#?HandleLidSwitchDocked="
+        line: "HandleLidSwitchDocked=ignore"
+        create: false
+
+    - name: Configure systemd-logind to ignore lid switch (external power)
+      ansible.builtin.lineinfile:
+        path: /etc/systemd/logind.conf
+        regexp: "^#?HandleLidSwitchExternalPower="
+        line: "HandleLidSwitchExternalPower=ignore"
+        create: false
+
+    - name: Restart systemd-logind to apply changes
+      ansible.builtin.systemd:
+        name: systemd-logind
+        state: restarted
+
+    - name: Install acpid for lid event handling
+      ansible.builtin.apt:
+        name: acpid
+        state: present
+        update_cache: false
+
+    - name: Create ACPI lid event configuration
+      ansible.builtin.copy:
+        content: |
+          event=button/lid.*
+          action=/etc/acpi/lid-display.sh
+        dest: /etc/acpi/events/lid-display
+        mode: "0644"
+
+    - name: Create lid display handler script
+      ansible.builtin.copy:
+        content: |
+          #!/bin/bash
+          if grep -q closed /proc/acpi/button/lid/LID0/state; then
+              echo 1 > /sys/class/graphics/fb0/blank
+          else
+              echo 0 > /sys/class/graphics/fb0/blank
+          fi
+        dest: /etc/acpi/lid-display.sh
+        mode: "0755"
+
+    - name: Enable and restart acpid service
+      ansible.builtin.systemd:
+        name: acpid
+        state: restarted
+        enabled: true

@@ -1,0 +1,175 @@
+---
+- name: Authorize Thunderbolt 10G Adapter on x86-node-01
+  hosts: x86-node-01
+  gather_facts: false
+  become: true
+  vars:
+    thunderbolt_device_match: "Ubiquiti Inc. UACC-Adapter-RJ45-USBC-10GE"
+    bridge_name: "vmbr0"
+  tasks:
+    - name: Install bolt utilities and polkitd
+      ansible.builtin.apt:
+        name:
+          - bolt
+          - polkitd
+        state: present
+        update_cache: false
+
+    - name: Ensure polkit service is started (polkit.service)
+      ansible.builtin.systemd:
+        name: polkit.service
+        state: started
+      failed_when: false
+
+    - name: Ensure polkit service is started (polkitd.service)
+      ansible.builtin.systemd:
+        name: polkitd.service
+        state: started
+      failed_when: false
+
+    - name: Ensure bolt service is started
+      ansible.builtin.systemd:
+        name: bolt.service
+        state: started
+      failed_when: false
+
+    - name: List Thunderbolt devices
+      ansible.builtin.command: boltctl list --all
+      changed_when: false
+      register: boltctl_list
+
+    - name: Capture network interfaces before authorization
+      ansible.builtin.command: ls /sys/class/net
+      changed_when: false
+      register: netdevs_before_result
+
+    - name: Extract Thunderbolt device UUID
+      ansible.builtin.shell: |
+        set -o pipefail
+        boltctl list --all | awk '
+          $0 ~ /{{ thunderbolt_device_match | regex_escape }}/ { in_dev=1 }
+          in_dev && $2 == "uuid:" { print $3; exit }
+        '
+      args:
+        executable: /bin/bash
+      changed_when: false
+      register: thunderbolt_uuid_result
+
+    - name: Set Thunderbolt device UUID
+      ansible.builtin.set_fact:
+        thunderbolt_uuid: "{{ thunderbolt_uuid_result.stdout | trim }}"
+
+    - name: Fail when device UUID is missing
+      ansible.builtin.fail:
+        msg: "No Thunderbolt device UUID found in boltctl output. Is the adapter plugged in?"
+      when: thunderbolt_uuid is not defined or thunderbolt_uuid | length == 0
+
+    - name: Enroll and authorize Thunderbolt device
+      ansible.builtin.command: boltctl enroll {{ thunderbolt_uuid }} --policy=auto
+      register: boltctl_enroll
+      changed_when: "'authorized' in boltctl_enroll.stdout or 'enrolled' in boltctl_enroll.stdout"
+      failed_when: boltctl_enroll.rc != 0 and 'already' not in (boltctl_enroll.stderr | lower)
+
+    - name: Wait for udev to settle after authorization
+      ansible.builtin.command: udevadm settle
+      changed_when: false
+
+    - name: Show Thunderbolt device info
+      ansible.builtin.command: boltctl info {{ thunderbolt_uuid }}
+      changed_when: false
+      register: boltctl_info
+
+    - name: Verify Thunderbolt device is authorized
+      ansible.builtin.assert:
+        that:
+          - "'status:        authorized' in boltctl_info.stdout"
+        fail_msg: "Thunderbolt device is still not authorized (expected status: authorized)."
+
+    - name: Capture network interfaces after authorization
+      ansible.builtin.command: ls /sys/class/net
+      changed_when: false
+      register: netdevs_after_result
+
+    - name: Set detected management interface from netdev diff
+      ansible.builtin.set_fact:
+        management_interface: >-
+          {{
+            (netdevs_after_result.stdout_lines | difference(netdevs_before_result.stdout_lines))
+            | first
+          }}
+      when: (netdevs_after_result.stdout_lines | difference(netdevs_before_result.stdout_lines)) | length == 1
+
+    - name: Find Thunderbolt PCI address from lspci (fallback)
+      ansible.builtin.shell: |
+        set -o pipefail
+        lspci -nn -D | awk '/Aquantia Corp\./ && /AQC113/ { print $1; exit }'
+      args:
+        executable: /bin/bash
+      changed_when: false
+      register: thunderbolt_pci_address
+      when: management_interface is not defined or management_interface | length == 0
+
+    - name: Verify Thunderbolt PCI address is present
+      ansible.builtin.assert:
+        that:
+          - thunderbolt_pci_address.stdout | trim | length > 0
+        fail_msg: "Thunderbolt PCI address not found from lspci output."
+      when: management_interface is not defined or management_interface | length == 0
+
+    - name: Find management interface from PCI address
+      ansible.builtin.shell: |
+        set -o pipefail
+        ls "/sys/bus/pci/devices/{{ thunderbolt_pci_address.stdout | trim }}/net" | head -n 1
+      args:
+        executable: /bin/bash
+      changed_when: false
+      register: management_interface_detected
+      when: management_interface is not defined or management_interface | length == 0
+
+    - name: Set management interface
+      ansible.builtin.set_fact:
+        management_interface: "{{ management_interface_detected.stdout | trim }}"
+      when: management_interface is not defined or management_interface | length == 0
+
+    - name: Show network interfaces
+      ansible.builtin.command: ip -br link
+      changed_when: false
+
+    - name: Check expected management interface exists
+      ansible.builtin.stat:
+        path: /sys/class/net/{{ management_interface }}
+      register: management_interface_stat
+
+    - name: Verify expected management interface is present
+      ansible.builtin.assert:
+        that:
+          - management_interface is defined
+          - management_interface | length > 0
+          - management_interface_stat.stat.exists
+        fail_msg: "Expected interface {{ management_interface }} is missing."
+
+    - name: Backup existing network config
+      ansible.builtin.copy:
+        src: /etc/network/interfaces
+        dest: /etc/network/interfaces.backup
+        mode: "0600"
+        remote_src: true
+
+    - name: Set management address from ansible_host
+      ansible.builtin.set_fact:
+        management_address: "{{ ansible_host }}/24"
+
+    - name: Write management network config
+      ansible.builtin.template:
+        src: network-interfaces-proxmox-default.j2
+        dest: /etc/network/interfaces
+        mode: "0644"
+      vars:
+        iface_name: "{{ management_interface }}"
+        management_address: "{{ management_address }}"
+
+    - name: Reboot to apply network configuration (no wait)
+      ansible.builtin.command: /sbin/reboot
+      async: 1
+      poll: 0
+      changed_when: true
