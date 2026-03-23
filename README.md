@@ -21,13 +21,21 @@ The Terraform S3 state key stays on `on-prem-networking/terraform.tfstate` for n
 
 This project is operated locally. CI is limited to Terraform validate and Ansible lint.
 
+State management remains local state file + S3 sync script for this project (no S3 backend + DynamoDB locking).
+
 Common commands:
 
 ```bash
-make tf-state-fetch
 make tf-init
 make tf-validate
-make tf-plan
+make tf-plan-sync ARGS='-out=tfplan'
+make tf-apply-sync ARGS='tfplan'
+```
+
+Manual state sync commands:
+
+```bash
+make tf-state-fetch
 make tf-state-backup
 ```
 
