@@ -20,6 +20,7 @@ locals {
     "VM.Config.Cloudinit",
     "VM.Config.CPU",
     "VM.Config.Disk",
+    "VM.Config.HWType",
     "VM.Config.Memory",
     "VM.Config.Network",
     "VM.Config.Options",
@@ -31,22 +32,35 @@ locals {
     "SDN.Use",
   ]
 
+  datastore_use_privileges = [
+    "Datastore.Allocate",
+    "Datastore.AllocateSpace",
+    "Datastore.Audit",
+  ]
+
   pools = {
     sgfdevs = {
-      comment         = "managedBy=terraform,team=sgfdevs"
-      role_id         = "SgfdevsVmAdmin"
-      network_role_id = "SgfdevsNetworkUse"
-      role_privileges = local.pool_privileges
+      comment            = "managedBy=terraform,team=sgfdevs"
+      role_id            = "SgfdevsVmAdmin"
+      network_role_id    = "SgfdevsNetworkUse"
+      storage_role_id    = "SgfdevsDatastoreUse"
+      role_privileges    = local.pool_privileges
+      storage_privileges = local.datastore_use_privileges
       allowed_sdn_networks = [
         "sgfdevs",
       ]
+      allowed_datastores = [
+        "vmdata",
+        "local",
+      ]
       users = [
         {
-          user_id        = "sgfdevs-gha@pve"
-          user_comment   = "managedBy=terraform,pool=sgfdevs,purpose=gha"
-          token_name     = "gha"
-          token_comment  = "managedBy=terraform,pool=sgfdevs,purpose=gha"
-          token_ssm_path = "/homelab/proxmox/sgfdevs/gha-token"
+          user_id               = "sgfdevs-gha@pve"
+          user_comment          = "managedBy=terraform,pool=sgfdevs,purpose=gha"
+          token_name            = "gha"
+          token_comment         = "managedBy=terraform,pool=sgfdevs,purpose=gha"
+          token_ssm_path        = "/homelab/proxmox/sgfdevs/gha-token"
+          privileges_separation = false
         },
       ]
     }
@@ -56,6 +70,15 @@ locals {
 
   sdn_acl_paths = {
     for network_key, network in local.sdn_networks : network_key => "/sdn/zones/${network.zone_id}/${network.vnet_id}"
+  }
+
+  datastore_ids = toset(flatten([
+    for pool in values(local.pools) : try(pool.allowed_datastores, [])
+  ]))
+
+  datastore_acl_paths = {
+    for datastore_id in local.datastore_ids :
+    datastore_id => "/storage/${datastore_id}"
   }
 
   proxmox_pool_roles = {
@@ -71,7 +94,14 @@ locals {
     if try(length(pool.allowed_sdn_networks), 0) > 0
   }
 
-  proxmox_roles = merge(local.proxmox_pool_roles, local.proxmox_network_roles)
+  proxmox_storage_roles = {
+    for pool_id, pool in local.pools : pool.storage_role_id => {
+      privileges = pool.storage_privileges
+    }
+    if try(length(pool.allowed_datastores), 0) > 0
+  }
+
+  proxmox_roles = merge(local.proxmox_pool_roles, local.proxmox_network_roles, local.proxmox_storage_roles)
 
   pool_users = flatten([
     for pool_id, pool in local.pools : [
@@ -79,7 +109,9 @@ locals {
         pool_id              = pool_id
         role_id              = pool.role_id
         network_role_id      = pool.network_role_id
+        storage_role_id      = pool.storage_role_id
         allowed_sdn_networks = try(pool.allowed_sdn_networks, [])
+        allowed_datastores   = try(pool.allowed_datastores, [])
       })
     ]
   ])
@@ -92,10 +124,11 @@ locals {
 
   proxmox_user_tokens = {
     for user in local.pool_users : "${user.pool_id}_${user.user_id}_${user.token_name}" => {
-      user_id    = user.user_id
-      token_name = user.token_name
-      comment    = user.token_comment
-      ssm_path   = coalesce(try(user.token_ssm_path, ""), "")
+      user_id               = user.user_id
+      token_name            = user.token_name
+      comment               = user.token_comment
+      ssm_path              = coalesce(try(user.token_ssm_path, ""), "")
+      privileges_separation = try(user.privileges_separation, true)
     }
     if try(user.token_name, "") != ""
   }
@@ -116,6 +149,14 @@ locals {
           propagate = true
         }
         if contains(keys(local.sdn_acl_paths), network_key)
+      ],
+      [
+        for datastore_id in user.allowed_datastores : {
+          path      = local.datastore_acl_paths[datastore_id]
+          role_id   = user.storage_role_id
+          propagate = true
+        }
+        if contains(keys(local.datastore_acl_paths), datastore_id)
       ]
     )
   }
@@ -170,7 +211,7 @@ resource "proxmox_virtual_environment_user_token" "this" {
   token_name            = each.value.token_name
   comment               = try(each.value.comment, null)
   expiration_date       = try(each.value.expiration_date, null)
-  privileges_separation = try(each.value.privileges_separation, true)
+  privileges_separation = each.value.privileges_separation
 
   lifecycle {
     replace_triggered_by = [terraform_data.proxmox_token_rotation]
