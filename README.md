@@ -1,46 +1,55 @@
 # infra-on-prem
 
-OpenTofu and Ansible project for glitchedmob on-prem infrastructure migration.
+OpenTofu and Ansible infrastructure for on-prem networking and platform access.
 
-## Migration Model
+## Scope
 
-This repository is migrated in two phases:
+- **OpenTofu (`src/tf/`)**: manages RouterOS router/switch config (bridges, interfaces, VLANs, DHCP, DNS, firewall/NAT), plus Proxmox access resources and Headscale auth-key publishing to AWS SSM.
+- **State sync (`src/scripts/on-prem-state.sh`)**: fetches and backs up local Terraform state to S3.
+- **Ansible (`src/ansible/`)**: on-prem automation tooling and lint/install workflow.
 
-1. Phase 2A: RouterOS-only Terraform migration from `infra-old/src/on-prem-networking`.
-2. Phase 2B: Layer Proxmox + Headscale + AWS resources and merge Ansible projects.
+## Prerequisites
 
-The Terraform S3 state key is `infra-on-prem/terraform.tfstate`.
+- [OpenTofu](https://opentofu.org/) >= 1.11
+- [uv](https://docs.astral.sh/uv/) for Ansible tooling
+- Required environment variables:
+  - `INFRA_TF_STATE_BUCKET`
+  - `TF_VAR_router_host`, `TF_VAR_router_username`, `TF_VAR_router_password`
+  - `TF_VAR_switch_host`, `TF_VAR_switch_username`, `TF_VAR_switch_password`
 
-## Structure
+## Usage
 
-- `src/tf/` - RouterOS Terraform stack (Phase 2A base)
-- `src/scripts/on-prem-state.sh` - S3 state fetch/backup helper
-- `src/ansible/` - Reserved for merged Ansible management/bootstrap content
-
-## Local-First Operations
-
-This project is operated locally. CI is limited to Terraform validate and Ansible lint.
-
-State management remains local state file + S3 sync script for this project (no S3 backend + DynamoDB locking).
-
-Common commands:
+### OpenTofu
 
 ```bash
 make tf-init
-make tf-validate
+make tf-plan
 make tf-plan-sync ARGS='-out=tfplan'
+make tf-show ARGS=tfplan
+make tf-output
 make tf-apply-sync ARGS='tfplan'
+make tf-validate
+make tf-format
+make tf-lint-fix
+make tf-provider-lock ARGS='-platform=darwin_arm64'
 ```
 
-Manual state sync commands:
+### State Sync
 
 ```bash
 make tf-state-fetch
 make tf-state-backup
 ```
 
-## Required Environment
+### Ansible
 
-- `INFRA_TF_STATE_BUCKET` for state fetch/backup script
-- `TF_VAR_router_host`, `TF_VAR_router_username`, `TF_VAR_router_password`
-- `TF_VAR_switch_host`, `TF_VAR_switch_username`, `TF_VAR_switch_password`
+```bash
+make ansible-install
+make ansible-lint
+```
+
+## Operational Notes
+
+- This stack is operated locally.
+- CI runs validation/lint checks only.
+- State is local plus explicit S3 sync; this stack does not use a remote backend lock flow.
