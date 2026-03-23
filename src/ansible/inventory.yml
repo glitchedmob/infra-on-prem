@@ -34,7 +34,7 @@ all:
         proxmox_arm_cluster:
       vars:
         tailscale_login_server: "https://headscale.levizitting.com"
-        tailscale_advertise_routes: "10.0.0.0/24"
+        tailscale_advertise_routes: "10.0.0.0/24,10.20.0.0/16"
 
     bootstrap:
       vars:
