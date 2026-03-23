@@ -1,11 +1,11 @@
 locals {
   admin_devices = {
-    levi_framework = {
+    levi_framework_16 = {
       address     = "192.168.1.10"
       mac_address = "52:0d:40:03:78:a5"
       comment     = "managedBy=terraform,network=home,role=admin"
     }
-    levi_macbook = {
+    levi_m1_macbook = {
       address     = "192.168.1.11"
       mac_address = "42:6d:65:36:5d:e3"
       comment     = "managedBy=terraform,network=home,role=admin"
