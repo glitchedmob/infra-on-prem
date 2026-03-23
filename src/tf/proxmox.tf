@@ -12,6 +12,8 @@ locals {
     "Datastore.Allocate",
     "Datastore.AllocateSpace",
     "Datastore.Audit",
+    "Pool.Allocate",
+    "Pool.Audit",
     "Sys.Audit",
     "VM.Allocate",
     "VM.Audit",
@@ -24,6 +26,7 @@ locals {
     "VM.Config.Memory",
     "VM.Config.Network",
     "VM.Config.Options",
+    "VM.GuestAgent.Audit",
     "VM.Migrate",
     "VM.PowerMgmt",
   ]
