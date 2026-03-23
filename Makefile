@@ -1,5 +1,5 @@
 .PHONY: help tf-init tf-plan tf-plan-sync tf-show tf-output tf-apply tf-apply-sync tf-validate tf-format tf-lint-fix \
-        tf-state-fetch tf-state-backup ansible-install ansible-lint
+        tf-provider-lock tf-providers-lock tf-state-fetch tf-state-backup ansible-install ansible-lint
 
 TF_DIR := src/tf
 ANSIBLE_DIR := src/ansible
@@ -19,6 +19,7 @@ help:
 	@echo "  Validate:          make tf-validate"
 	@echo "  Format check:      make tf-format"
 	@echo "  Format fix:        make tf-lint-fix"
+	@echo "  Provider lock:     make tf-provider-lock [ARGS='-platform=darwin_arm64']"
 	@echo ""
 	@echo "State commands:"
 	@echo "  Fetch from S3:     make tf-state-fetch [ARGS='--allow-missing']"
@@ -58,6 +59,11 @@ tf-format:
 
 tf-lint-fix:
 	@tofu -chdir=$(TF_DIR) fmt -recursive
+
+tf-provider-lock:
+	@source "$(ENVRC)" && tofu -chdir=$(TF_DIR) providers lock $(ARGS)
+
+tf-providers-lock: tf-provider-lock
 
 tf-state-fetch:
 	@source "$(ENVRC)" && bash $(STATE_SCRIPT) fetch $(ARGS)
