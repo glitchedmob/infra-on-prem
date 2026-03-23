@@ -18,7 +18,6 @@ permissions:
 
 jobs:
   lint:
-    if: ${{ hashFiles('src/ansible/pyproject.toml') != '' }}
     uses: glitchedmob/infra-gha/.github/workflows/ansible-lint.yml@v0.6.4
     with:
       working-directory: src/ansible
