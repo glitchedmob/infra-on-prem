@@ -1,9 +1,9 @@
 locals {
   proxmox_images = {
     debian13 = {
-      file_name    = "debian-13-generic-amd64.img"
+      file_name    = "debian-13-generic-amd64.qcow2"
       url          = "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-generic-amd64.qcow2"
-      content_type = "iso"
+      content_type = "import"
       file_format  = "qcow2"
     }
   }

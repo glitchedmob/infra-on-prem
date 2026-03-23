@@ -7,7 +7,7 @@ output "proxmox_user_token_ssm_paths" {
 }
 
 output "proxmox_vm_image_file_ids" {
-  description = "Proxmox image file IDs by image name and node"
+  description = "Proxmox image IDs by image name and node"
   value = {
     for image_name in keys(local.proxmox_images) : image_name => {
       for node_name in local.proxmox_nodes :

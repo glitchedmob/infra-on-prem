@@ -164,8 +164,8 @@
       when: vmdata_storage_status.rc != 0
       changed_when: true
 
-    - name: Restrict local storage content to non-VM assets
-      ansible.builtin.command: pvesm set local --content iso,vztmpl,backup,snippets
+    - name: Restrict local storage content to non-VM assets and import images
+      ansible.builtin.command: pvesm set local --content iso,vztmpl,backup,snippets,import
       changed_when: false
 
     - name: Remove local-lvm storage
