@@ -7,7 +7,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 TF_ON_PREM_DIR="$PROJECT_ROOT/tf"
-STATE_KEY="on-prem-networking/terraform.tfstate"
+STATE_KEY="infra-on-prem/terraform.tfstate"
 
 show_usage() {
     echo "Usage: $0 <action> [options]"
