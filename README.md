@@ -46,7 +46,10 @@ make tf-state-backup
 ```bash
 make ansible-install
 make ansible-lint
+make ansible PLAYBOOK=proxmox-snippets.yml
 ```
+
+`proxmox-snippets.yml` copies all files in `src/ansible/playbooks/snippets/` to `/var/lib/vz/snippets` on every host in `proxmox_nodes`.
 
 ## Operational Notes
 

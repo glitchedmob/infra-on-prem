@@ -1,0 +1,50 @@
+---
+- name: Register cloud-init snippets on Proxmox nodes
+  hosts: proxmox_nodes
+  become: true
+  gather_facts: false
+  vars:
+    proxmox_snippets_storage_id: local
+    proxmox_snippets_storage_path: /var/lib/vz/snippets
+    proxmox_snippets_source_dir: "{{ playbook_dir }}/snippets"
+  tasks:
+    - name: Discover snippet files in repository
+      ansible.builtin.set_fact:
+        proxmox_snippet_files: >-
+          {{
+            (
+              query('ansible.builtin.fileglob', proxmox_snippets_source_dir ~ '/*.yaml')
+              + query('ansible.builtin.fileglob', proxmox_snippets_source_dir ~ '/*.yml')
+            )
+            | unique
+            | sort
+          }}
+
+    - name: Assert at least one snippet file exists
+      ansible.builtin.assert:
+        that:
+          - proxmox_snippet_files | length > 0
+        fail_msg: "No snippet files were found under {{ proxmox_snippets_source_dir }}"
+
+    - name: Ensure snippets directory exists
+      ansible.builtin.file:
+        path: "{{ proxmox_snippets_storage_path }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Copy snippets to Proxmox local storage
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ proxmox_snippets_storage_path }}/{{ item | basename }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop: "{{ proxmox_snippet_files }}"
+
+    - name: Assert each snippet is addressable by Proxmox storage ID
+      ansible.builtin.command: >-
+        pvesm path {{ proxmox_snippets_storage_id }}:snippets/{{ item | basename }}
+      changed_when: false
+      loop: "{{ proxmox_snippet_files }}"

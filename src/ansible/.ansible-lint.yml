@@ -3,4 +3,4 @@ profile: production
 offline: true
 exclude_paths:
   - collections
-  - public-fps/charts
+  - playbooks/snippets
