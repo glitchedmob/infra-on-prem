@@ -55,7 +55,7 @@ resource "routeros_ip_firewall_filter" "input_project_dns_udp" {
   protocol          = "udp"
   dst_port          = "53"
   in_interface_list = routeros_interface_list.router_project_vlans.name
-  place_before      = routeros_ip_firewall_filter.input_drop_non_lan.id
+  place_before      = routeros_ip_firewall_filter.input_project_drop.id
   comment           = "managedBy=terraform,scope=projects-to-router,service=dns-udp,action=allow"
 }
 
@@ -66,7 +66,7 @@ resource "routeros_ip_firewall_filter" "input_project_dns_tcp" {
   protocol          = "tcp"
   dst_port          = "53"
   in_interface_list = routeros_interface_list.router_project_vlans.name
-  place_before      = routeros_ip_firewall_filter.input_drop_non_lan.id
+  place_before      = routeros_ip_firewall_filter.input_project_drop.id
   comment           = "managedBy=terraform,scope=projects-to-router,service=dns-tcp,action=allow"
 }
 
@@ -77,7 +77,7 @@ resource "routeros_ip_firewall_filter" "input_project_dhcp" {
   protocol          = "udp"
   dst_port          = "67"
   in_interface_list = routeros_interface_list.router_project_vlans.name
-  place_before      = routeros_ip_firewall_filter.input_drop_non_lan.id
+  place_before      = routeros_ip_firewall_filter.input_project_drop.id
   comment           = "managedBy=terraform,scope=projects-to-router,service=dhcp,action=allow"
 }
 
