@@ -2,12 +2,14 @@ locals {
   network_cidrs = {
     home       = "192.168.1.0/24"
     management = "10.0.0.0/24"
+    lz         = "10.20.0.0/22"
     sgfdevs    = "10.20.4.0/22"
   }
 
   network_vlans = {
     home       = 10
     management = 11
+    lz         = 12
     sgfdevs    = 13
   }
 }
@@ -136,6 +138,45 @@ module "sgfdevs_network" {
 
   dhcp_pool_start = cidrhost(local.network_cidrs.sgfdevs, 100)
   dhcp_pool_end   = cidrhost(local.network_cidrs.sgfdevs, 1022)
+
+  router_bridge_name = routeros_interface_bridge.router_bridge.name
+
+  router_tagged_ports = [
+    routeros_interface_bridge_port.router_switch.interface
+  ]
+
+  router_access_ports = []
+
+  switch_bridge_name = routeros_interface_bridge.switch_bridge.name
+
+  switch_tagged_ports = [
+    routeros_interface_bridge_port.switch_router.interface,
+    routeros_interface_bridge_port.x86_node_01.interface,
+    routeros_interface_bridge_port.x86_node_02.interface,
+  ]
+
+  switch_access_ports = []
+
+  dns_records = {}
+}
+
+module "lz_network" {
+  source = "./modules/network"
+
+  providers = {
+    routeros.router = routeros.router
+    routeros.switch = routeros.switch
+  }
+
+  network_name            = "lz"
+  vlan_id                 = local.network_vlans.lz
+  router_parent_interface = routeros_interface_bridge.router_bridge.name
+  switch_parent_interface = routeros_interface_bridge.switch_bridge.name
+  network_cidr            = local.network_cidrs.lz
+  gateway_ip              = cidrhost(local.network_cidrs.lz, 1)
+
+  dhcp_pool_start = cidrhost(local.network_cidrs.lz, 100)
+  dhcp_pool_end   = cidrhost(local.network_cidrs.lz, 1022)
 
   router_bridge_name = routeros_interface_bridge.router_bridge.name
 

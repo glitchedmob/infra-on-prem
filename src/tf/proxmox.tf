@@ -42,6 +42,32 @@ locals {
   ]
 
   pools = {
+    lz = {
+      comment            = "managedBy=terraform,team=lz"
+      role_id            = "LzVmAdmin"
+      network_role_id    = "LzNetworkUse"
+      storage_role_id    = "LzDatastoreUse"
+      role_privileges    = local.pool_privileges
+      storage_privileges = local.datastore_use_privileges
+      allowed_sdn_networks = [
+        "lz",
+      ]
+      allowed_datastores = [
+        "vmdata",
+        "local",
+      ]
+      users = [
+        {
+          user_id               = "lz-gha@pve"
+          user_comment          = "managedBy=terraform,pool=lz,purpose=gha"
+          token_name            = "gha"
+          token_comment         = "managedBy=terraform,pool=lz,purpose=gha"
+          token_ssm_path        = "/homelab/proxmox/lz/gha-token"
+          privileges_separation = false
+        },
+      ]
+    }
+
     sgfdevs = {
       comment            = "managedBy=terraform,team=sgfdevs"
       role_id            = "SgfdevsVmAdmin"

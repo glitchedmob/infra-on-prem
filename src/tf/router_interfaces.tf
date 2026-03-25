@@ -77,3 +77,9 @@ resource "routeros_interface_list_member" "router_sgfdevs_vlan_projects" {
   list      = routeros_interface_list.router_project_vlans.name
   interface = module.sgfdevs_network.vlan_interface_name
 }
+
+resource "routeros_interface_list_member" "router_lz_vlan_projects" {
+  provider  = routeros.router
+  list      = routeros_interface_list.router_project_vlans.name
+  interface = module.lz_network.vlan_interface_name
+}

@@ -1,5 +1,13 @@
 locals {
   sdn_networks = {
+    lz = {
+      zone_id = "tnvlans"
+      vnet_id = "lz"
+      bridge  = "vmbr0"
+      tag     = local.network_vlans.lz
+      alias   = "lz network"
+    }
+
     sgfdevs = {
       zone_id = "tnvlans"
       vnet_id = "sgfdevs"
@@ -10,8 +18,8 @@ locals {
   }
 
   proxmox_sdn_zones = {
-    for network in local.sdn_networks : network.zone_id => {
-      bridge = network.bridge
+    for zone_id in toset([for network in values(local.sdn_networks) : network.zone_id]) : zone_id => {
+      bridge = one(distinct([for network in values(local.sdn_networks) : network.bridge if network.zone_id == zone_id]))
     }
   }
 }
