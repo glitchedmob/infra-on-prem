@@ -1,0 +1,61 @@
+---
+- name: Install push monitor heartbeat
+  hosts: proxmox_nodes
+  become: true
+  tasks:
+    - name: Assert SSM push URL path is set
+      ansible.builtin.assert:
+        that:
+          - ssm_monitor_push_url_path is defined
+          - ssm_monitor_push_url_path | length > 0
+        fail_msg: "Set ssm_monitor_push_url_path for each host."
+
+    - name: Fetch monitor push URL from SSM
+      ansible.builtin.set_fact:
+        monitor_push_url: "{{ lookup('amazon.aws.aws_ssm', ssm_monitor_push_url_path) }}"
+
+    - name: Install heartbeat script
+      ansible.builtin.copy:
+        dest: /usr/local/bin/monitor-push
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          set -euo pipefail
+          curl --silent --fail --max-time 10 "{{ monitor_push_url }}" > /dev/null
+
+    - name: Install systemd service unit
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/monitor-push.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Push monitor heartbeat
+          After=network-online.target
+          Wants=network-online.target
+
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/bin/monitor-push
+
+    - name: Install systemd timer unit
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/monitor-push.timer
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Run push monitor heartbeat every minute
+
+          [Timer]
+          OnBootSec=1min
+          OnUnitActiveSec=1min
+          AccuracySec=1s
+
+          [Install]
+          WantedBy=timers.target
+
+    - name: Enable and start heartbeat timer
+      ansible.builtin.systemd:
+        daemon_reload: true
+        name: monitor-push.timer
+        enabled: true
+        state: started
