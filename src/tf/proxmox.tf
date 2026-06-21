@@ -233,7 +233,7 @@ resource "proxmox_virtual_environment_user" "this" {
   }
 }
 
-resource "proxmox_virtual_environment_user_token" "this" {
+resource "proxmox_user_token" "this" {
   for_each = local.proxmox_user_tokens
 
   user_id               = each.value.user_id
@@ -259,6 +259,6 @@ resource "aws_ssm_parameter" "proxmox_user_token" {
   name             = each.value.ssm_path
   type             = "SecureString"
   description      = "Proxmox API token for ${each.value.user_id}"
-  value_wo         = proxmox_virtual_environment_user_token.this[each.key].value
+  value_wo         = proxmox_user_token.this[each.key].value
   value_wo_version = var.proxmox_token_rotation_version
 }

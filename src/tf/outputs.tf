@@ -11,7 +11,7 @@ output "proxmox_vm_image_file_ids" {
   value = {
     for image_name in keys(local.proxmox_images) : image_name => {
       for node_name in local.proxmox_nodes :
-      node_name => proxmox_virtual_environment_download_file.images["${image_name}:${node_name}"].id
+      node_name => proxmox_download_file.images["${image_name}:${node_name}"].id
     }
   }
 }
