@@ -262,3 +262,13 @@ resource "aws_ssm_parameter" "proxmox_user_token" {
   value_wo         = proxmox_user_token.this[each.key].value
   value_wo_version = var.proxmox_token_rotation_version
 }
+
+resource "proxmox_metrics_server" "otel" {
+  name                     = "lz-k3s-otel"
+  server                   = "lz-k3s.levizitting.com"
+  port                     = 30431
+  type                     = "opentelemetry"
+  opentelemetry_proto      = "http"
+  opentelemetry_path       = "/v1/metrics"
+  opentelemetry_verify_ssl = false
+}
