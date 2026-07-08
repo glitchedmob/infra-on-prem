@@ -10,5 +10,6 @@ iface {{ bridge_name }} inet static
     bridge-ports {{ iface_name }}
     bridge-stp off
     bridge-fd 0
+    ip-forward 1
 
 source /etc/network/interfaces.d/*

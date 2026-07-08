@@ -61,7 +61,12 @@
       ansible.builtin.copy:
         content: |
           # {{ ansible_managed | default('ANSIBLE MANAGED') }}
+          [Unit]
+          After=networking.service
+
           [Service]
+          ExecStartPost=-/sbin/sysctl -w net.ipv4.ip_forward=1
+          ExecStartPost=-/sbin/sysctl -w net.ipv6.conf.all.forwarding=1
           {% for route in _ts_routes %}
           ExecStartPost=-/sbin/ip rule add to {{ route }} priority 2500 lookup main
           {% endfor %}

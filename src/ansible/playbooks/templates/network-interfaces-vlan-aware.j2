@@ -10,6 +10,7 @@ iface {{ bridge_name }} inet manual
 	bridge-fd 0
 	bridge-vlan-aware yes
 	bridge-vids 2-4094
+	ip-forward 1
 
 auto {{ bridge_name }}.{{ management_vlan }}
 iface {{ bridge_name }}.{{ management_vlan }} inet static
