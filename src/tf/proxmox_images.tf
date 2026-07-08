@@ -2,10 +2,10 @@ locals {
   proxmox_images = {
     debian13 = {
       file_name          = "debian-13-genericcloud-amd64.qcow2"
-      url                = "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-amd64.qcow2"
+      url                = "https://cloud.debian.org/images/cloud/trixie/20260706-2531/debian-13-genericcloud-amd64-20260706-2531.qcow2"
       content_type       = "import"
       file_format        = "qcow2"
-      checksum           = "df2bd468b08566c0409a7982d6489d73499ad22f9a28646b538c2f21d08f15040a5e4737952ca209e9ad4488cd00793191791be9f135dee93082c86fcca3300c"
+      checksum           = "b565b4414a720b96f5ba0fdd41521138bbfbd53f6c1cf17f9a22088484190d2a0ec24e7fdfb76314710ad4c11c1056b5080883a2e4d40bc27cc353116eecd7e2"
       checksum_algorithm = "sha512"
     }
   }
