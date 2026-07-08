@@ -4,11 +4,11 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 6.33"
+      version = "~> 6.53"
     }
     proxmox = {
       source  = "bpg/proxmox"
-      version = "~> 0.106"
+      version = "~> 0.111"
     }
     routeros = {
       source  = "terraform-routeros/routeros"

@@ -190,6 +190,14 @@ locals {
     )
   }
 
+  proxmox_acls = {
+    for acl in flatten([
+      for user_id, acls in local.proxmox_user_acls : [
+        for acl in acls : merge(acl, { user_id = user_id })
+      ]
+    ]) : "${acl.user_id}:${acl.path}:${acl.role_id}" => acl
+  }
+
   proxmox_tokens_with_ssm = {
     for token_key, token in local.proxmox_user_tokens : token_key => token
     if coalesce(try(token.ssm_path, ""), "") != ""
@@ -222,15 +230,20 @@ resource "proxmox_virtual_environment_user" "this" {
   last_name       = try(each.value.last_name, null)
   password        = try(each.value.password, null)
   groups          = try(each.value.groups, null)
+}
 
-  dynamic "acl" {
-    for_each = try(local.proxmox_user_acls[each.key], [])
-    content {
-      path      = acl.value.path
-      role_id   = acl.value.role_id
-      propagate = try(acl.value.propagate, true)
-    }
-  }
+resource "proxmox_acl" "this" {
+  for_each = local.proxmox_acls
+
+  user_id   = each.value.user_id
+  path      = each.value.path
+  role_id   = each.value.role_id
+  propagate = try(each.value.propagate, true)
+
+  depends_on = [
+    proxmox_virtual_environment_user.this,
+    proxmox_virtual_environment_role.this,
+  ]
 }
 
 resource "proxmox_user_token" "this" {
