@@ -56,7 +56,7 @@ tf-apply-sync: tf-state-fetch
 	@$(MAKE) tf-state-backup
 
 tf-validate:
-	@source "$(ENVRC)" && tofu -chdir=$(TF_DIR) validate
+	@tofu -chdir=$(TF_DIR) validate
 
 tf-format:
 	@tofu -chdir=$(TF_DIR) fmt -check -recursive
