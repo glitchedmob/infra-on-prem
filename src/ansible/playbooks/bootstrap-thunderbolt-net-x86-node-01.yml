@@ -168,6 +168,32 @@
         iface_name: "{{ management_interface }}"
         management_address: "{{ management_address }}"
 
+    - name: Wait for the Thunderbolt uplink before configuring networking at boot
+      tags: thunderbolt-network-boot
+      block:
+        - name: Create the networking service override directory
+          ansible.builtin.file:
+            path: /etc/systemd/system/networking.service.d
+            state: directory
+            mode: "0755"
+
+        - name: Order networking after Thunderbolt authorization and device initialization
+          ansible.builtin.copy:
+            dest: /etc/systemd/system/networking.service.d/10-thunderbolt.conf
+            mode: "0644"
+            content: |
+              # Managed by Ansible. Bolt can start before the NIC finishes appearing.
+              [Unit]
+              Requires=bolt.service
+              After=bolt.service
+
+              [Service]
+              ExecStartPre=/usr/bin/udevadm wait --timeout=60 --settle /sys/class/net/{{ management_interface }}
+
+        - name: Reload systemd unit definitions without restarting networking
+          ansible.builtin.systemd_service:
+            daemon_reload: true
+
     - name: Reboot to apply network configuration (no wait)
       ansible.builtin.command: /sbin/reboot
       async: 1
