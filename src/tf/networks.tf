@@ -41,7 +41,6 @@ module "home_network" {
   switch_access_ports = [
     routeros_interface_bridge_port.switch_home_devices.interface,
     routeros_interface_bridge_port.arm_node_01.interface,
-    routeros_interface_bridge_port.x86_node_03.interface,
     routeros_interface_bridge_port.switch_unused3.interface
   ]
 
@@ -95,7 +94,9 @@ module "management_network" {
     routeros_interface_bridge_port.x86_node_02.interface,
   ]
 
-  switch_access_ports = []
+  switch_access_ports = [
+    routeros_interface_bridge_port.x86_node_03.interface,
+  ]
 
   dns_records = {
     "x86-node-01" = {

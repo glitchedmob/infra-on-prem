@@ -47,7 +47,7 @@ resource "routeros_interface_bridge_port" "x86_node_03" {
   provider  = routeros.switch
   bridge    = routeros_interface_bridge.switch_bridge.name
   interface = "sfp-sfpplus4"
-  pvid      = 10
+  pvid      = 11
 }
 
 resource "routeros_interface_bridge_port" "switch_home_devices" {
