@@ -92,11 +92,10 @@ module "management_network" {
     routeros_interface_bridge_port.switch_router.interface,
     routeros_interface_bridge_port.x86_node_01.interface,
     routeros_interface_bridge_port.x86_node_02.interface,
-  ]
-
-  switch_access_ports = [
     routeros_interface_bridge_port.x86_node_03.interface,
   ]
+
+  switch_access_ports = []
 
   dns_records = {
     "x86-node-01" = {
@@ -154,6 +153,7 @@ module "sgfdevs_network" {
     routeros_interface_bridge_port.switch_router.interface,
     routeros_interface_bridge_port.x86_node_01.interface,
     routeros_interface_bridge_port.x86_node_02.interface,
+    routeros_interface_bridge_port.x86_node_03.interface,
   ]
 
   switch_access_ports = []
@@ -193,6 +193,7 @@ module "lz_network" {
     routeros_interface_bridge_port.switch_router.interface,
     routeros_interface_bridge_port.x86_node_01.interface,
     routeros_interface_bridge_port.x86_node_02.interface,
+    routeros_interface_bridge_port.x86_node_03.interface,
   ]
 
   switch_access_ports = []
