@@ -116,6 +116,7 @@
       community.proxmox.proxmox_cluster:
         state: present
         api_host: "{{ hostvars[primary_node].ansible_host }}"
+        api_password: "{{ primary_api_password }}"
         cluster_name: "{{ cluster_name }}"
         link0: "{{ primary_link0_address }}"
       delegate_to: localhost
