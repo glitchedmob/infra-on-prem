@@ -192,7 +192,7 @@
       community.general.lvol:
         vg: "{{ os_vg }}"
         lv: "{{ os_root_lv }}"
-        size: 100%FREE
+        size: +100%FREE
         resizefs: false
       when: (os_vg_free.stdout | trim | float) > 0
 
