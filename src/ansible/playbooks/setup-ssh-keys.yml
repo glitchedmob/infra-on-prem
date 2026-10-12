@@ -1,63 +1,54 @@
 ---
-- name: Install SSH keys and disable password auth
+- name: Install the SSM SSH key and disable installer password access
   hosts: bootstrap
   gather_facts: false
   become: true
+  any_errors_fatal: true
   vars:
-    op_item_name: "Proxmox Nodes"
+    node_ssh_public_key: "{{ lookup('amazon.aws.aws_ssm', ssm_public_key_path, region=ssm_region) }}"
   tasks:
-    - name: Ensure .ssh directory exists
+    - name: Verify the public key is present
+      ansible.builtin.assert:
+        that:
+          - node_ssh_public_key | trim | length > 0
+        fail_msg: "Import the shared Proxmox SSH key into SSM before running this playbook."
+
+    - name: Ensure the root SSH directory exists
       ansible.builtin.file:
         path: /root/.ssh
         state: directory
         mode: "0700"
 
-    - name: Get list of 1Password accounts
-      ansible.builtin.command: op account list --format json
-      delegate_to: localhost
-      become: false
-      changed_when: false
-      register: op_accounts
-
-    - name: Get account ID by email
-      ansible.builtin.shell: |
-        set -o pipefail
-        echo '{{ op_accounts.stdout }}' | jq -r '.[] | select(.email == "me@levizitting.com") | .user_uuid'
-      args:
-        executable: /bin/bash
-      delegate_to: localhost
-      become: false
-      changed_when: false
-      register: account_id
-
-    - name: Read public key from 1Password
-      ansible.builtin.command: |
-        op item get "{{ op_item_name }}" --field "public key" --account {{ account_id.stdout }}
-      delegate_to: localhost
-      become: false
-      changed_when: false
-      register: public_key_result
-
-    - name: Install authorized_keys
+    - name: Add the shared key without removing existing authorized keys
       ansible.builtin.lineinfile:
         path: /root/.ssh/authorized_keys
-        line: "{{ public_key_result.stdout }}"
+        line: "{{ node_ssh_public_key | trim }}"
         create: true
         mode: "0600"
+
+    - name: Verify key authentication through the canonical inventory entry
+      ansible.builtin.command: /usr/bin/true
+      delegate_to: "{{ inventory_hostname | regex_replace('-bootstrap$', '') }}"
+      changed_when: false
 
     - name: Disable password authentication
       ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
         regexp: "^#?\\s*PasswordAuthentication"
         line: "PasswordAuthentication no"
+        validate: /usr/sbin/sshd -t -f %s
+      notify: Restart SSH
 
     - name: Disable root password login
       ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
         regexp: "^#?\\s*PermitRootLogin"
         line: "PermitRootLogin prohibit-password"
+        validate: /usr/sbin/sshd -t -f %s
+      notify: Restart SSH
 
-    - name: Restart SSH service
-      ansible.builtin.systemd:
+  handlers:
+    - name: Restart SSH
+      ansible.builtin.systemd_service:
         name: ssh
         state: restarted
