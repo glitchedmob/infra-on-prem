@@ -23,6 +23,8 @@ all:
         x86-node-03: &x86_node_03
           ansible_host: 10.0.0.5
           proxmox_api_password: "{{ lookup('env', 'X86_NODE_03_SSH_PASS', default=undef()) }}"
+          os_disk: /dev/disk/by-id/ata-SanDisk_SDSSDH3_250G_215258800906
+          vmdata_disk: /dev/disk/by-id/nvme-Samsung_SSD_9100_PRO_with_Heatsink_4TB_S7ZRNJ0Y504254P
 
     proxmox_arm_cluster:
       hosts: {}
