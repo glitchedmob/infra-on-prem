@@ -2,9 +2,33 @@ export AWS_DEFAULT_PROFILE="your-aws-profile-name"
 export INFRA_TF_STATE_BUCKET="your-infra-tf-state-bucket"
 
 export TF_VAR_router_host="https://router.example.local"
-export TF_VAR_router_username="admin"
-export TF_VAR_router_password="your-router-api-password"
-
 export TF_VAR_switch_host="https://switch.example.local"
-export TF_VAR_switch_username="admin"
-export TF_VAR_switch_password="your-switch-api-password"
+export TF_VAR_proxmox_endpoint="https://10.0.0.3:8006/"
+export TF_VAR_proxmox_root_user="root@pam"
+
+ssm_values="$(
+  aws --profile "$AWS_DEFAULT_PROFILE" --region us-east-2 ssm get-parameters \
+    --names \
+      "/infra/lz/infra-on-prem/X86_NODE_01_SSH_PASS" \
+      "/infra/lz/infra-on-prem/X86_NODE_02_SSH_PASS" \
+      "/infra/lz/infra-on-prem/X86_NODE_03_SSH_PASS" \
+      "/infra/lz/infra-on-prem/TF_VAR_router_username" \
+      "/infra/lz/infra-on-prem/TF_VAR_router_password" \
+      "/infra/lz/infra-on-prem/TF_VAR_switch_username" \
+      "/infra/lz/infra-on-prem/TF_VAR_switch_password" \
+      "/infra/lz/infra-on-prem/TF_VAR_headscale_api_key" \
+    --with-decryption --output json --no-cli-pager |
+    jq '.Parameters | map({key: (.Name | split("/") | last), value: .Value}) | from_entries'
+)"
+
+export X86_NODE_01_SSH_PASS="$(jq -r '.X86_NODE_01_SSH_PASS' <<< "$ssm_values")"
+export X86_NODE_02_SSH_PASS="$(jq -r '.X86_NODE_02_SSH_PASS' <<< "$ssm_values")"
+export X86_NODE_03_SSH_PASS="$(jq -r '.X86_NODE_03_SSH_PASS' <<< "$ssm_values")"
+export TF_VAR_router_username="$(jq -r '.TF_VAR_router_username' <<< "$ssm_values")"
+export TF_VAR_router_password="$(jq -r '.TF_VAR_router_password' <<< "$ssm_values")"
+export TF_VAR_switch_username="$(jq -r '.TF_VAR_switch_username' <<< "$ssm_values")"
+export TF_VAR_switch_password="$(jq -r '.TF_VAR_switch_password' <<< "$ssm_values")"
+export TF_VAR_headscale_api_key="$(jq -r '.TF_VAR_headscale_api_key' <<< "$ssm_values")"
+export TF_VAR_proxmox_root_password="$X86_NODE_01_SSH_PASS"
+
+unset ssm_values
