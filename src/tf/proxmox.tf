@@ -131,7 +131,16 @@ locals {
     if try(length(pool.allowed_datastores), 0) > 0
   }
 
-  proxmox_roles = merge(local.proxmox_pool_roles, local.proxmox_network_roles, local.proxmox_storage_roles)
+  proxmox_roles = merge(
+    local.proxmox_pool_roles,
+    local.proxmox_network_roles,
+    local.proxmox_storage_roles,
+    {
+      VmConfigOptions = {
+        privileges = ["VM.Config.Options"]
+      }
+    }
+  )
 
   pool_users = flatten([
     for pool_id, pool in local.pools : [
@@ -169,6 +178,12 @@ locals {
         {
           path      = "/pool/${user.pool_id}"
           role_id   = user.role_id
+          propagate = true
+        },
+        # Creation checks tag permissions before the VM belongs to its pool.
+        {
+          path      = "/vms"
+          role_id   = "VmConfigOptions"
           propagate = true
         }
       ],
